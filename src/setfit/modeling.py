@@ -524,7 +524,7 @@ class SetFitModel(PyTorchModelHubMixin):
 
     def predict(
         self,
-        inputs: Union[str, List[str]],
+        inputs: Union[str, List[str], List[int], List[List[int]]],
         batch_size: int = 32,
         as_numpy: bool = False,
         use_labels: bool = True,
@@ -554,6 +554,27 @@ class SetFitModel(PyTorchModelHubMixin):
                 equal length to the inputs, denoting to which class each input is predicted to belong. If the inputs
                 is a single string, then the output is a single label as well.
         """
+        def istokenized(inputs):
+            if not inputs: 
+                return True
+            if not isinstance(inputs, list): 
+                return False
+            batched = not isinstance(inputs[0], int)
+            if not batched:
+                for elem in inputs:
+                    if not isinstance(elem, int):
+                        return False
+            else:    
+                for elem in inputs:
+                    if not istokenized(elem):
+                        return False
+            return True
+        
+        if inputs and istokenized(inputs): # inputs are input_ids
+            if isinstance(inputs[0], int):
+                inputs = [inputs]
+            inputs = self.model_body.tokenizer.batch_decode(inputs)
+
         is_singular = isinstance(inputs, str)
         if is_singular:
             inputs = [inputs]
