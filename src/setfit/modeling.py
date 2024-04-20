@@ -582,7 +582,6 @@ class SetFitModel(PyTorchModelHubMixin):
             if isinstance(inputs[0], int):
                 inputs = [inputs]
             inputs = self.model_body.tokenizer.batch_decode(inputs)
-
         is_singular = isinstance(inputs, str)
         if is_singular:
             inputs = [inputs]
