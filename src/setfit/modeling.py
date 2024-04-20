@@ -478,9 +478,28 @@ class SetFitModel(PyTorchModelHubMixin):
             outputs = torch.from_numpy(outputs)
         return outputs
 
+    def _istokenized(self, inputs: Union[str, List[str], List[int], List[List[int]]]) -> bool:
+        """
+        Internal function to check if inputs are tokenized.
+        """
+        if not inputs:
+            return True
+        if not isinstance(inputs, list):
+            return False
+        batched = not isinstance(inputs[0], int)
+        if not batched:
+            for elem in inputs:
+                if not isinstance(elem, int):
+                    return False
+        else:
+            for elem in inputs:
+                if not self._istokenized(elem):
+                    return False
+        return True
+
     def predict_proba(
         self,
-        inputs: Union[str, List[str]],
+        inputs: Union[str, List[str], List[int], List[List[int]]],
         batch_size: int = 32,
         as_numpy: bool = False,
         show_progress_bar: Optional[bool] = None,
@@ -488,7 +507,7 @@ class SetFitModel(PyTorchModelHubMixin):
         """Predict the probabilities of the various classes.
 
         Args:
-            inputs (`Union[str, List[str]]`): The input sentences to predict class probabilities for.
+            inputs (`Union[str, List[str], List[int], List[List[int]]]`): The input sentences to predict class probabilities for.
             batch_size (`int`, defaults to `32`): The batch size to use in encoding the sentences to embeddings.
                 Higher often means faster processing but higher memory usage.
             as_numpy (`bool`, defaults to `False`): Whether to output as numpy array instead.
@@ -509,6 +528,10 @@ class SetFitModel(PyTorchModelHubMixin):
             probabilities of predicting an input as a class. If the input is a string, then the output
             is a vector with shape [NUM_CLASSES,].
         """
+        if inputs and self._istokenized(inputs): # inputs are input_ids
+            if isinstance(inputs[0], int):
+                inputs = [inputs]
+            inputs = self.model_body.tokenizer.batch_decode(inputs)
         is_singular = isinstance(inputs, str)
         if is_singular:
             inputs = [inputs]
@@ -533,7 +556,7 @@ class SetFitModel(PyTorchModelHubMixin):
         """Predict the various classes.
 
         Args:
-            inputs (`Union[str, List[str]]`): The input sentence or sentences to predict classes for.
+            inputs (`Union[str, List[str], List[int], List[List[int]]]`): The input sentence or sentences to predict classes for.
             batch_size (`int`, defaults to `32`): The batch size to use in encoding the sentences to embeddings.
                 Higher often means faster processing but higher memory usage.
             as_numpy (`bool`, defaults to `False`): Whether to output as numpy array instead.
@@ -554,23 +577,8 @@ class SetFitModel(PyTorchModelHubMixin):
                 equal length to the inputs, denoting to which class each input is predicted to belong. If the inputs
                 is a single string, then the output is a single label as well.
         """
-        def istokenized(inputs):
-            if not inputs: 
-                return True
-            if not isinstance(inputs, list): 
-                return False
-            batched = not isinstance(inputs[0], int)
-            if not batched:
-                for elem in inputs:
-                    if not isinstance(elem, int):
-                        return False
-            else:    
-                for elem in inputs:
-                    if not istokenized(elem):
-                        return False
-            return True
         
-        if inputs and istokenized(inputs): # inputs are input_ids
+        if inputs and self._istokenized(inputs): # inputs are input_ids
             if isinstance(inputs[0], int):
                 inputs = [inputs]
             inputs = self.model_body.tokenizer.batch_decode(inputs)
