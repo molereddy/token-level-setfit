@@ -1,3 +1,4 @@
+## Fork of SetFit that allows for tokenized (input_ids) as inputs, so that SetFit models can be used like usual models.
 <img src="https://raw.githubusercontent.com/huggingface/setfit/main/assets/setfit.png">
 
 <p align="center">
